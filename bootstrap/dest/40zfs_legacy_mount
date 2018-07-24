@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -eEu
+set -o pipefail
+set -x
+
+test -e "/root/bootstrap/dest/$(basename "$0")"
+
+zfs set mountpoint=legacy tank/var/log
+zfs set mountpoint=legacy tank/var/tmp
+sed -i '/^tank\/var\//d' /etc/fstab
+cat >> /etc/fstab << EOF
+tank/var/log /var/log zfs defaults 0 0
+tank/var/tmp /var/tmp zfs defaults 0 0
+EOF

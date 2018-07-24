@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+set -eEu
+set -o pipefail
+set -x
+
+## Setup encryption
+# shellcheck disable=SC2174
+mkdir -m0700 -p $temp_key_dir
+for dsk in $rdisk1 $rdisk2 $ddisk1 $ddisk2 $sdisk1; do
+  if [ -n "$dsk" ]; then
+    echo
+    if ! [[ -f $temp_key_dir/$dsk-part1 ]]; then
+        dd if=/dev/urandom "of=$temp_key_dir/$dsk-part1" bs=512 count=1
+    fi
+    chmod 600 "$temp_key_dir/$dsk-part1"
+
+    # use key file for luksFormat
+    cryptsetup luksFormat --batch-mode --key-file "$temp_key_dir/$dsk-part1" -c aes-xts-plain64 -s 256 -h sha256 "/dev/disk/$DISKS_BY/$dsk-part1"
+    cryptsetup luksAddKey --key-file "$temp_key_dir/$dsk-part1" "/dev/disk/$DISKS_BY/$dsk-part1"
+  fi
+done

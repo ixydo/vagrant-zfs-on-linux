@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+set -eEu
+set -o pipefail
+set -x
+
+test -e "/root/bootstrap/dest/$(basename "$0")"
+
+sed -i '/^luks-\(root\|data\|zfs\)[0-9] /d' /etc/crypttab
+rdisk1_uuid="$(blkid -s UUID -o value /dev/disk/$DISKS_BY/$rdisk1-part1)"
+rdisk2_uuid="$(blkid -s UUID -o value /dev/disk/$DISKS_BY/$rdisk2-part1)"
+
+ddisk1_uuid="$(blkid -s UUID -o value /dev/disk/$DISKS_BY/$ddisk1-part1)"
+ddisk2_uuid="$(blkid -s UUID -o value /dev/disk/$DISKS_BY/$ddisk2-part1)"
+
+sdisk1_uuid="$(blkid -s UUID -o value /dev/disk/$DISKS_BY/$sdisk1-part1)"
+
+{
+  echo "luks-zfs1 UUID=$rdisk1_uuid $dest_key_dir/$rdisk1-part1 luks,discard,initramfs"
+  echo "luks-zfs2 UUID=$rdisk2_uuid $dest_key_dir/$rdisk2-part1 luks,discard,initramfs"
+
+  echo "luks-zfs3 UUID=$ddisk1_uuid $dest_key_dir/$ddisk1-part1 luks,discard,initramfs"
+  echo "luks-zfs4 UUID=$ddisk2_uuid $dest_key_dir/$ddisk2-part1 luks,discard,initramfs"
+
+  echo "luks-zfs5 UUID=$sdisk1_uuid $dest_key_dir/$sdisk1-part1 luks,discard"
+} >> /etc/crypttab
+
+sed -i '/^\(CRYPTSETUP\|KEYFILE_PATTERN\)=/d' /etc/cryptsetup-initramfs/conf-hook
+{
+  echo "CRYPTSETUP=y"
+  echo "KEYFILE_PATTERN=$dest_key_dir/*"
+} >> /etc/cryptsetup-initramfs/conf-hook

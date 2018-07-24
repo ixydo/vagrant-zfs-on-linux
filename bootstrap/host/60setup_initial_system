@@ -1,0 +1,140 @@
+#!/usr/bin/env bash
+
+set -eEu
+set -o pipefail
+set -x
+
+# format & mount boot disk
+mkfs.ext4 -L boot /dev/md0
+test -d /mnt/boot || mkdir /mnt/boot
+mount /dev/md0 /mnt/boot
+
+# install minimal system
+case "$(lsb_release -si)" in
+  Ubuntu)
+    debootstrap --include=cryptsetup,dosfstools bionic /mnt
+    ;;
+  Debian)
+    debootstrap --arch amd64 --include=gdisk,cryptsetup,openssh-server,zsh,vim,tmux,sudo,ssh,iptables,less,locales stretch /mnt
+    ;;
+esac
+zfs set devices=off tank
+
+# setup networking
+echo "$system_hostname" > /mnt/etc/hostname
+sed -i '/^127[.]0[.]1[.]1 /d' /mnt/etc/hosts
+echo "127.0.1.1 $system_hostname" >> /mnt/etc/hosts
+# grab first device that isn't loopback
+eth_dev=$(ip link | grep -v '^ ' | awk '{ print $2 }' | cut -f 1 -d : | grep -v '^lo$' | head -n 1)
+if [[ -n $eth_dev ]]; then
+    case "$(lsb_release -si)" in
+      Ubuntu)
+        cat > "/mnt/etc/netplan/$eth_dev.yaml" <<EOF
+network:
+version: 2
+ethernets:
+NAME:
+  dhcp4: true
+EOF
+        ;;
+      Debian)
+        if [ $ip4_method = 'static' ]; then
+          cat > "/mnt/etc/network/interfaces.d/$eth_dev" <<EOF
+auto $eth_dev
+iface $eth_dev inet static
+  address $ip4_address
+  gateway $ip4_gateway
+  dns-nameservers ${nameservers[*]}
+
+iface $eth_dev inet6 static
+  address ${ip6_address/\/.*/}
+  netmask ${ip6_address/.*\//}
+  gateway $ip6_gateway
+EOF
+          cat > "/mnt/etc/network/interfaces.d/br0" <<EOF
+auto br0
+iface br0 inet static
+  bridge_ports none
+  address 10.49.6.1
+  netmask 255.255.255.0
+  pre-up brctl addbr \$IFACE
+
+iface br0 inet6 static
+  bridge_ports none
+  address ${ip6_address/::2\/64/:b0::1}
+  netmask 96
+  pre-up /sbin/sysctl net.ipv6.conf.$IFACE.disable_ipv6=0
+EOF
+        else
+          cat > "/mnt/etc/network/interfaces.d/$eth_dev" <<EOF
+auto eth0
+iface eth0 inet dhcp
+EOF
+        fi
+        ;;
+    esac
+fi
+case "$(lsb_release -si)" in
+  Ubuntu)
+    cat > /mnt/etc/apt/sources.list << EOF
+deb http://archive.ubuntu.com/ubuntu bionic main universe
+deb-src http://archive.ubuntu.com/ubuntu bionic main universe
+deb http://security.ubuntu.com/ubuntu bionic-security main universe
+deb-src http://security.ubuntu.com/ubuntu bionic-security main universe
+deb http://archive.ubuntu.com/ubuntu bionic-updates main universe
+deb-src http://archive.ubuntu.com/ubuntu bionic-updates main universe
+EOF
+    ;;
+  Debian)
+    echo "deb $APT_SECURITY stretch/updates main contrib non-free" \
+      > /mnt//etc/apt/sources.list.d/security.list
+
+    for component in contrib non-free; do
+      echo "deb $APT_PACKAGES stretch $component" \
+        > /mnt/etc/apt/sources.list.d/$component.list
+    done
+
+    echo "deb $APT_PACKAGES stretch-backports main contrib non-free" \
+      > /mnt/etc/apt/sources.list.d/backports.list
+
+    cat  > /mnt/etc/apt/preferences.d/00zfsbackports <<EOF
+Package: zfs*
+Pin: release a=stretch-backports
+Pin-Priority: 550
+
+Package: lib*zfs*
+Pin: release a=stretch-backports
+Pin-Priority: 550
+
+Package: lib*zpool*
+Pin: release a=stretch-backports
+Pin-Priority: 550
+
+Package: libnvpair1linux
+Pin: release a=stretch-backports
+Pin-Priority: 550
+
+Package: libuutil1linux
+Pin: release a=stretch-backports
+Pin-Priority: 550
+
+Package: spl-dkms
+Pin: release a=stretch-backports
+Pin-Priority: 550
+EOF
+    ;;
+esac
+mount --rbind /dev  /mnt/dev
+mount --rbind /proc /mnt/proc
+mount --rbind /sys  /mnt/sys
+
+if [ $USE_EFI -eq 1 ]; then
+  modprobe efivarfs
+  if [ ! -d /mnt/sys/firmware/efi/efivars ]; then
+    # shellcheck disable=SC2015
+    mkdir -p /mnt/sys/firmware/efi/efivars \
+      && {
+        mount -t efivarfs efivarfs /mnt/sys/firmware/efi/efivars || :
+      } || :
+  fi
+fi

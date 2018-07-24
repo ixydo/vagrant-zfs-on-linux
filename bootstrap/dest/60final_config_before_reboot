@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+set -eEu
+set -o pipefail
+set -x
+
+test -e "/root/bootstrap/dest/$(basename "$0")"
+
+for group in ansible ixydo ssh; do
+  getent group $group > /dev/null || addgroup --system $group
+done
+set +x
+echo
+root_pw=$(getent shadow root | cut -f 2 -d :)
+if [[ $root_pw == '*' ]] || [[ -z $root_pw ]]; then
+    echo 'Set root password for system'
+    passwd
+    echo
+fi
+read -r -p 'Enter username to create: ' username
+set -x
+if [[ -n $username ]]; then
+    zfs create "tank/home/$username"
+    adduser --shell /bin/zsh "$username"
+    cp -a /etc/skel/.[!.]* "/home/$username/"
+    chown -R "$username:$username" "/home/$username"
+    usermod -a -G adm,ansible,cdrom,dip,ixydo,plugdev,ssh,sudo "$username"
+fi
+for snap in tank/root@install tank/home@install ; do
+    if zfs list -t snap | grep -q $snap; then
+        zfs destroy $snap
+    fi
+    zfs snapshot $snap
+done

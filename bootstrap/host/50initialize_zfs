@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+
+set -eEu
+set -o pipefail
+set -x
+
+modprobe zfs
+
+if zpool status tank > /dev/null 2>&1; then
+  zpool destroy tank
+fi
+zpool create -o ashift=12 \
+    -O atime=off -O canmount=off -O compression=lz4 -O normalization=formD \
+    -O mountpoint=/ -O redundant_metadata=most -R /mnt \
+    tank \
+      mirror /dev/mapper/luks-zfs1 /dev/mapper/luks-zfs3 \
+      mirror /dev/mapper/luks-zfs2 /dev/mapper/luks-zfs4 \
+      spare /dev/mapper/luks-zfs5
+
+## Create filesystems
+# root FS
+zfs create -o canmount=noauto -o mountpoint=/         tank/root
+zfs mount tank/root
+
+# /var
+zfs create -o canmount=off -o setuid=off -o exec=off -o mountpoint=none     tank/var
+zfs create -o com.sun:auto-snapshot=false -o mountpoint=/var/cache          tank/var/cache
+zfs create                                -o mountpoint=/var/log            tank/var/log
+zfs create -o com.sun:auto-snapshot=false -o exec=on -o mountpoint=/var/tmp tank/var/tmp
+
+# Database filesystem
+zfs create -o canmount=off -o mountpoint=none                                        tank/var/lib
+zfs create                                                                           tank/var/lib/mysql
+zfs create -o recordsize=16k -o logbias=throughput -o mountpoint=/var/lib/mysql/data tank/var/lib/mysql/data
+zfs create -o recordsize=1m                        -o mountpoint=/var/lib/mysql/log  tank/var/lib/mysql/log
+zfs create -o recordsize=16k -o logbias=throughput -o mountpoint=/var/lib/mysql/tmp  \
+           -o com.sun:auto-snapshot=false                                            tank/var/lib/mysql/tmp
+
+# LXC filesystem
+zfs create -o canmount=off -o setuid=on  -o exec=on  -o mountpoint=none  tank/var/lib/lxc
+zfs create -o mountpoint=/var/lib/lxc/ht-jcm-3                           tank/var/lib/lxc/ht-jcm-3
+
+# /home
+zfs create -o mountpoint=/home -o setuid=off                             tank/home
+

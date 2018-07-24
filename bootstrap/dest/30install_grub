@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+set -eEu
+set -o pipefail
+set -x
+
+test -e "/root/bootstrap/dest/$(basename "$0")"
+
+apt install dosfstools
+mkdosfs -F 32 -n EFI /dev/md1
+test -d /boot/efi || mkdir /boot/efi
+echo "LABEL=EFI /boot/efi vfat nofail,x-systemd.device-timeout=1 0 1" >> /etc/fstab
+mount /boot/efi
+
+if [ $USE_EFI -eq 1 ]; then
+  apt install --yes grub-efi-amd64
+else
+  apt install --yes grub-pc
+fi

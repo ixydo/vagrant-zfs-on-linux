@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+export USE_EFI=0
+
+## DISKS_BY is a setting to toggle disk discovery in /dev/disk/$DISKS_BY/*
+## Ideally you should use by-id, but if you're testing in a VM that
+## doesn't expose disks by-id you could use `by-path`.
+
+# Config for use in vagrant
+export DISKS_BY='by-path'
+export rdisk1='pci-0000:00:0d.0-ata-2'
+export rdisk2='pci-0000:00:0d.0-ata-3'
+export ddisk1='pci-0000:00:0d.0-ata-4'
+export ddisk2='pci-0000:00:0d.0-ata-5'
+export sdisk1='pci-0000:00:0d.0-ata-6'
+
+# Sample of actual disks on a physical server
+#export DISKS_BY='by-id'
+#export rdisk1="ata-Micron_5100_MTFDDAK240TCB_174719CC1445"
+#export rdisk2="ata-Micron_5100_MTFDDAK240TCB_174719CC146D"
+#export ddisk1="ata-Micron_5100_MTFDDAK240TCB_174719CC13EE"
+#export ddisk2="ata-Micron_5100_MTFDDAK240TCB_174719CC1494"
+#export sdisk1="ata-Micron_5100_MTFDDAK240TCB_174719CB5FB3"
+
+# dirs for key files
+export temp_key_dir=/dev/shm/luks-keys
+export dest_key_dir=/etc/keys/luks
+
+# the hostname of the new system
+export system_hostname='zfs-debian'
+
+export ip4_method="dhcp"
+# When using ip4_method="static", the following config is needed
+#export ip4_address="1.2.3.4/26"
+#export ip4_gateway="1.2.3.1"
+#export ip6_address="2a01::2/64"
+#export ip6_gateway="fe80::1"
+#export nameservers="1.2.3.4 5.6.7.8 2a01:a:b:c::add:9999 2a01:a:b:c::add:9898"
+
+# Generic apt mirror URIs
+export APT_MIRROR="http://httpredir.debian.org/debian"
+export APT_PACKAGES="$APT_MIRROR"
+export APT_SECURITY="http://security.debian.org"
+
+# Apt mirror URI examples for hetzner.de
+#export APT_MIRROR="http://mirror.hetzner.de/debian"
+#export APT_PACKAGES="$APT_MIRROR/packages"
+#export APT_SECURITY="$APT_MIRROR/security"

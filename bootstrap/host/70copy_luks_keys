@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+set -eEu
+set -o pipefail
+set -x
+
+# shellcheck disable=SC2174
+mkdir -p -m 700 /mnt$dest_key_dir
+cp -a $temp_key_dir/* /mnt$dest_key_dir
+chmod 400 /mnt$dest_key_dir/*

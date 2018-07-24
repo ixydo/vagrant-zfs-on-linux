@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+
+set -u
+set -x
+set -o pipefail
+
+: "${DISKS_BY?"You must first source the relevant config into your environment"}"
+
+# Fix locales
+: "${LC_ALL:=en_GB.UTF-8}"
+sed -i 's/^de/# de/' /etc/locale.gen
+sed -i 's/^ru/# ru/' /etc/locale.gen
+sed -i 's/# '"$LC_ALL"'/'"$LC_ALL"'/' /etc/locale.gen
+locale-gen
+
+cat  > /etc/apt/preferences.d/00zfsbackports <<EOF
+Package: zfs*
+Pin: release a=$(lsb_release -sc)-backports
+Pin-Priority: 550
+
+Package: lib*zfs*
+Pin: release a=$(lsb_release -sc)-backports
+Pin-Priority: 550
+
+Package: lib*zpool*
+Pin: release a=$(lsb_release -sc)-backports
+Pin-Priority: 550
+
+Package: libnvpair1linux
+Pin: release a=$(lsb_release -sc)-backports
+Pin-Priority: 550
+
+Package: libuutil1linux
+Pin: release a=$(lsb_release -sc)-backports
+Pin-Priority: 550
+
+Package: spl-dkms
+Pin: release a=$(lsb_release -sc)-backports
+Pin-Priority: 550
+EOF
+
+apt install --yes tmux zfs-initramfs
+
+cryptsetup luksOpen "/dev/disk/$DISKS_BY/$rdisk1-part1" luks-zfs1
+cryptsetup luksOpen "/dev/disk/$DISKS_BY/$rdisk2-part1" luks-zfs2
+cryptsetup luksOpen "/dev/disk/$DISKS_BY/$ddisk1-part1" luks-zfs3
+cryptsetup luksOpen "/dev/disk/$DISKS_BY/$ddisk2-part1" luks-zfs4
+cryptsetup luksOpen "/dev/disk/$DISKS_BY/$sdisk1-part1" luks-zfs5
+
+modprobe zfs
+
+zpool import tank -R /mnt
+
+mount | grep zfs | sort | tac | awk '/\/mnt/ {print $3}' | xargs -i{} umount -lf {}
+rm -rf /mnt/*
+
+zfs mount tank/root
+mount /dev/md0 /mnt/boot
+mount /dev/md1 /mnt/boot/efi
+zfs list | awk '/\/mnt\// { print $1 }' | xargs -n1 zfs mount
+
+mount -t proc proc /mnt/proc
+mount -t sysfs sysfs /mnt/sys
+mount -t devtmpfs udev /mnt/dev

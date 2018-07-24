@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+set -eEu
+set -o pipefail
+set -x
+
+cryptsetup status luks-zfs1 || cryptsetup luksOpen --key-file "$temp_key_dir/$rdisk1-part1" "/dev/disk/$DISKS_BY/$rdisk1-part1" luks-zfs1
+cryptsetup status luks-zfs2 || cryptsetup luksOpen --key-file "$temp_key_dir/$rdisk2-part1" "/dev/disk/$DISKS_BY/$rdisk2-part1" luks-zfs2
+
+cryptsetup status luks-zfs3 || cryptsetup luksOpen --key-file "$temp_key_dir/$ddisk1-part1" "/dev/disk/$DISKS_BY/$ddisk1-part1" luks-zfs3
+cryptsetup status luks-zfs4 || cryptsetup luksOpen --key-file "$temp_key_dir/$ddisk2-part1" "/dev/disk/$DISKS_BY/$ddisk2-part1" luks-zfs4
+
+cryptsetup status luks-zfs5 || cryptsetup luksOpen --key-file "$temp_key_dir/$sdisk1-part1" "/dev/disk/$DISKS_BY/$sdisk1-part1" luks-zfs5

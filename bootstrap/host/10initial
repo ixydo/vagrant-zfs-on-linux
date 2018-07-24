@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+
+set -eEu
+set -o pipefail
+set -x
+
+# Disable HT
+for cpu in /sys/devices/system/cpu/cpu{8..15}/online; do
+  if [ -r $cpu ]; then
+    echo 0 > $cpu
+  fi
+done
+
+# Fix locales
+: "${LC_ALL:=en_GB.UTF-8}"
+sed -i 's/^de/# de/' /etc/locale.gen
+sed -i 's/^ru/# ru/' /etc/locale.gen
+sed -i 's/# '"$LC_ALL"'/'"$LC_ALL"'/' /etc/locale.gen
+locale-gen
+
+echo "LANG=$LC_ALL" > /etc/default/locale
+dpkg-reconfigure tzdata
+
+# Initialize packages
+case "$(lsb_release -si)" in
+  Ubuntu)
+    apt-add-repository universe
+    apt update
+    apt install --yes "linux-headers-$(uname -r)"
+    apt install --yes debootstrap gdisk zfs-initramfs mdadm
+    ;;
+
+  Debian)
+    echo "deb $APT_SECURITY $(lsb_release -sc)/updates main contrib non-free" \
+      > /etc/apt/sources.list.d/security.list
+
+    for component in contrib non-free; do
+      echo "deb $APT_PACKAGES $(lsb_release -sc) $component" \
+        > /etc/apt/sources.list.d/$component.list
+    done
+
+    echo "deb $APT_PACKAGES $(lsb_release -sc)-backports main contrib non-free" \
+      > /etc/apt/sources.list.d/backports.list
+
+    cat  > /etc/apt/preferences.d/00zfsbackports <<EOF
+Package: zfs*
+Pin: release a=$(lsb_release -sc)-backports
+Pin-Priority: 550
+
+Package: lib*zfs*
+Pin: release a=$(lsb_release -sc)-backports
+Pin-Priority: 550
+
+Package: lib*zpool*
+Pin: release a=$(lsb_release -sc)-backports
+Pin-Priority: 550
+
+Package: libnvpair1linux
+Pin: release a=$(lsb_release -sc)-backports
+Pin-Priority: 550
+
+Package: libuutil1linux
+Pin: release a=$(lsb_release -sc)-backports
+Pin-Priority: 550
+
+Package: spl-dkms
+Pin: release a=$(lsb_release -sc)-backports
+Pin-Priority: 550
+EOF
+
+    apt update
+    apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -fy install
+    apt install --yes "linux-headers-$(uname -r)"
+    apt install -fy debootstrap gdisk parted dpkg-dev cryptsetup zfs-initramfs mdadm
+    ;;
+
+  *)
+    echo "Unkown distribution: $(lsb_release -i).  Aborting"
+    exit 1
+    ;;
+
+esac

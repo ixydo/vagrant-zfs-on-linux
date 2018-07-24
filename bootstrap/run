@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# https://gist.github.com/vrivellino/7dcf150da4cc1d07008315643bfdbfb5
+# Adapted from https://github.com/zfsonlinux/zfs/wiki/Ubuntu-18.04-Root-on-ZFS
+# Should be executed from a live CD environment
+
+set -eEu
+set -o pipefail
+
+cd "$(dirname "$0")"
+source "$(dirname "$(readlink -f "$0")")/config"
+
+if [ $# -eq 0 ]; then
+    echo
+    echo "Performing pre-installation setups ..."
+    echo
+    set -x
+    host/10initial
+    host/20partition
+    host/30setup_encryption
+    host/40luks_open
+    host/50initialize_zfs
+    echo "Performing minimal installation ..."
+    host/60setup_initial_system
+    host/70copy_luks_keys
+    ## Copy script to destination system and exec via chroot
+    cp -r "$(dirname "$(readlink -f "$0")")" /mnt/root/
+    chroot /mnt /bin/bash --login "/root/$(basename "$(dirname "$(readlink -f "$0")")")/run" post-install-config
+    set +x
+
+    echo
+    echo System is ready to be rebooted
+    echo
+    echo If all goes well, you can complete items specified https://github.com/zfsonlinux/zfs/wiki/Ubuntu-18.04-Root-on-ZFS#step-7-configure-swap
+    echo
+    echo The following commands will be executed:
+    echo "# mount | grep -v zfs | tac | awk '/\\/mnt/ {print \$3}' | xargs -i{} umount -lf {}"
+    echo \# zpool export tank
+    echo \# reboot
+    echo
+    read -r -p 'Press enter to continue ...'
+    mount | grep -v zfs | tac | awk '/\/mnt/ {print $3}' | xargs -i{} umount -lf {}
+    zpool export tank
+    #reboot
+
+elif [[ $1 == post-install-config ]]; then
+    echo
+    echo "Performing post-install configuration ..."
+    echo
+    set -x
+    dest/10basic_config
+    dest/20crypttab
+    dest/30install_grub
+    dest/40zfs_legacy_mount
+    dest/50setup_boot
+    dest/60final_config_before_reboot
+    set +x
+else
+    echo "Fatal: unknown argument '$*'" >&2
+    exit 1
+fi

@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+
+set -eEu
+set -o pipefail
+set -x
+
+## Clear out software raid and partition configurations on disks
+for dsk in $rdisk1 $rdisk2 $ddisk1 $ddisk2 $sdisk1; do
+  if [ -n "$dsk" ]; then
+    for prt in 1 2 3 4; do
+      mdadm --zero-superblock --force /dev/disk/$DISKS_BY/$dsk-part$prt
+    done
+    mdadm --zero-superblock --force /dev/disk/$DISKS_BY/$dsk
+    sgdisk --zap-all /dev/disk/$DISKS_BY/$dsk
+  fi
+done
+
+for dsk in $rdisk1 $rdisk2 $ddisk1 $ddisk2 $sdisk1; do
+  if [ -n "$dsk" ]; then
+    ##  part-2                        BIOS boot partition
+    sgdisk   -n2:2M:+1M   -t2:EF02    /dev/disk/$DISKS_BY/$dsk
+    ##  part-3                        /boot/efi
+    sgdisk   -n3:0:+128M  -t3:EF00    /dev/disk/$DISKS_BY/$dsk
+    ##  part-4                        /boot
+    sgdisk   -n4:0:+384M  -t4:8300    /dev/disk/$DISKS_BY/$dsk
+    ##  part-1                        ZPOOL / ZFS
+    sgdisk   -n1:0:0      -t1:8300    /dev/disk/$DISKS_BY/$dsk
+  fi
+done
+
+partprobe --summary
+sleep 6
+
+# Create RAID1 array for /boot volume
+mdadm --create /dev/md0 --level=1 \
+  --raid-devices=2 \
+    /dev/disk/$DISKS_BY/$rdisk1-part4 \
+    /dev/disk/$DISKS_BY/$rdisk2-part4 \
+  --spare-devices=3 \
+    /dev/disk/$DISKS_BY/$ddisk1-part4 \
+    /dev/disk/$DISKS_BY/$ddisk2-part4 \
+    /dev/disk/$DISKS_BY/$sdisk1-part4
+
+# Create RAID1 array for /boot/efi volume
+mdadm --create /dev/md1 --level=1 \
+  --raid-devices=2 \
+    /dev/disk/$DISKS_BY/$rdisk1-part3 \
+    /dev/disk/$DISKS_BY/$rdisk2-part3 \
+  --spare-devices=3 \
+    /dev/disk/$DISKS_BY/$ddisk1-part3 \
+    /dev/disk/$DISKS_BY/$ddisk2-part3 \
+    /dev/disk/$DISKS_BY/$sdisk1-part3

@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+set -eEu
+set -o pipefail
+set -x
+
+test -e "/root/bootstrap/dest/$(basename "$0")"
+
+[[ $(grub-probe /) == zfs ]]
+umask 0077
+update-initramfs -c -k all || update-initramfs -u -k all
+
+chmod 600 /boot/initrd*
+
+sed -i 's/^GRUB_HIDDEN_TIMEOUT=0/## GRUB_HIDDEN_TIMEOUT=0/' /etc/default/grub
+sed -i 's/^#GRUB_TERMINAL=console/GRUB_TERMINAL=console/' /etc/default/grub
+# shellcheck disable=SC1004
+sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/## GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"\
+GRUB_CMDLINE_LINUX_DEFAULT=""/' /etc/default/grub
+update-grub
+if [ $USE_EFI -eq 1 ]; then
+  for dsk in $rdisk1 $rdisk2 $ddisk1 $ddisk2 $sdisk1; do
+    grub-install --target=x86_64-efi --efi-directory=/boot/efi \
+        --recheck --no-floppy $dsk
+  done
+else
+  for dsk in $rdisk1 $rdisk2 $ddisk1 $ddisk2 $sdisk1; do
+    grub-install --target=i386-pc --recheck --no-floppy /dev/$dsk
+  done
+fi
+
+ls /boot/grub/*/zfs.mod

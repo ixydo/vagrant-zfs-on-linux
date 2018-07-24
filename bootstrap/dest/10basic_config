@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+set -eEu
+set -o pipefail
+set -x
+
+test -e "/root/bootstrap/dest/$(basename "$0")"
+
+sed -i 's/^de/# de/' /etc/locale.gen
+sed -i 's/^ru/# ru/' /etc/locale.gen
+sed -i 's/# '"$LC_ALL"'/'"$LC_ALL"'/' /etc/locale.gen
+locale-gen
+
+echo "LANG=$LC_ALL" > /etc/default/locale
+dpkg-reconfigure tzdata
+
+ln -s /proc/self/mounts /etc/mtab || :
+apt update
+KPKGS=("linux-image-amd64" "linux-headers-amd64")
+apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -fy install
+apt install --yes busybox kbd lsb-release mdadm dpkg-dev bridge-utils
+apt install --yes --no-install-recommends "${KPKGS[@]}"
+apt install --yes zfs-initramfs cryptsetup
+
+boot_part_uuid=$(blkid -s UUID -o value /dev/md0)
+sed -i "/$boot_part_uuid/d" /etc/fstab
+echo "UUID=$boot_part_uuid /boot ext4 defaults 0 2" >> /etc/fstab
+echo "tank/root / zfs defaults 0 0" >> /etc/fstab
