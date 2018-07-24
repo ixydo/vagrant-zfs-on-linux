@@ -24,8 +24,3 @@ For this to work it's neccessary to use the jessie-backports 4.9 kernel or stret
 4. Initialize the system.  This is interactive, so it's not auto provisioned.
 
         guest $ sudo /vagrant/booststrap/run
-
-5. On the system simulate a disk failure and attempt to replace the failed
-   disk.
-
-        guest $ sudo /vagrant/simulate-disk-failure.sh
