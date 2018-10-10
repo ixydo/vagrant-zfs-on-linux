@@ -5,6 +5,11 @@ ENV["LC_ALL"] = "en_US.UTF-8"
 
 Vagrant.configure("2") do |config|
   config.vm.box = "debian/stretch64"
+  #config.vm.network :private_network, :ip => '192.168.56.101'
+  config.vm.network :private_network, type: "dhcp"
+
+  authorized_keys = `cat ~/.ssh/id_rsa.pub`
+  config.vm.provision :shell, :inline => "echo '#{authorized_keys}' >> /home/vagrant/.ssh/authorized_keys"
 
   config.vm.provider :virtualbox do |v|
     v.memory = 2048
