@@ -38,24 +38,28 @@ NAME:
 EOF
         ;;
       Debian)
-        if [ $ip4_method = 'static' ]; then
-          cat > "/mnt/etc/network/interfaces.d/$eth_dev" <<EOF
-auto $eth_dev
-iface $eth_dev inet static
+        if [ $ip_method = 'static' ]; then
+          # In debian stretch the first interface is always called eno1
+          cat > "/mnt/etc/network/interfaces.d/eno1" <<EOF
+auto eno1
+iface eno1 inet static
   address $ip4_address
+  netmask $ipv4_netmask
   gateway $ip4_gateway
-  dns-nameservers ${nameservers[*]}
+  dns-nameservers ${nameservers_v4[*]}
 
-iface $eth_dev inet6 static
-  address ${ip6_address/\/.*/}
-  netmask ${ip6_address/.*\//}
+iface eno1 inet6 static
+  address $ip6_address
+  netmask $ip6_netmask
   gateway $ip6_gateway
+  dns-nameservers ${nameservers_v6[*]}
 EOF
           cat > "/mnt/etc/network/interfaces.d/br0" <<EOF
 auto br0
 iface br0 inet static
   bridge_ports none
   address $br0_address
+  netmask $br0_netmask
   pre-up brctl addbr \$IFACE
 
 iface br0 inet6 static
