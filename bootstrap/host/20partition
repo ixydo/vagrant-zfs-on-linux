@@ -31,22 +31,39 @@ done
 partprobe --summary
 sleep 6
 
+if [ -n "$sdisk1" ]; then
+  SPARE_MD0=(
+    "/dev/disk/$DISKS_BY/$ddisk1-part4"
+    "/dev/disk/$DISKS_BY/$ddisk2-part4"
+    "/dev/disk/$DISKS_BY/$sdisk1-part4"
+  )
+  SPARE_MD1=(
+    "/dev/disk/$DISKS_BY/$ddisk1-part3"
+    "/dev/disk/$DISKS_BY/$ddisk2-part3"
+    "/dev/disk/$DISKS_BY/$sdisk1-part3"
+  )
+else
+  SPARE_MD0=(
+    "/dev/disk/$DISKS_BY/$ddisk1-part4"
+    "/dev/disk/$DISKS_BY/$ddisk2-part4"
+  )
+  SPARE_MD1=(
+    "/dev/disk/$DISKS_BY/$ddisk1-part3"
+    "/dev/disk/$DISKS_BY/$ddisk2-part3"
+  )
+fi
 # Create RAID1 array for /boot volume
 mdadm --create /dev/md0 --level=1 \
   --raid-devices=2 \
-    /dev/disk/$DISKS_BY/$rdisk1-part4 \
-    /dev/disk/$DISKS_BY/$rdisk2-part4 \
-  --spare-devices=3 \
-    /dev/disk/$DISKS_BY/$ddisk1-part4 \
-    /dev/disk/$DISKS_BY/$ddisk2-part4 \
-    /dev/disk/$DISKS_BY/$sdisk1-part4
+    "/dev/disk/$DISKS_BY/$rdisk1-part4" \
+    "/dev/disk/$DISKS_BY/$rdisk2-part4" \
+  --spare-devices=${#SPARE_MD0[@]} \
+    "${SPARE_MD0[@]}"
 
 # Create RAID1 array for /boot/efi volume
 mdadm --create /dev/md1 --level=1 \
   --raid-devices=2 \
-    /dev/disk/$DISKS_BY/$rdisk1-part3 \
-    /dev/disk/$DISKS_BY/$rdisk2-part3 \
-  --spare-devices=3 \
-    /dev/disk/$DISKS_BY/$ddisk1-part3 \
-    /dev/disk/$DISKS_BY/$ddisk2-part3 \
-    /dev/disk/$DISKS_BY/$sdisk1-part3
+    "/dev/disk/$DISKS_BY/$rdisk1-part3" \
+    "/dev/disk/$DISKS_BY/$rdisk2-part3" \
+  --spare-devices=${#SPARE_MD0[@]} \
+    "${SPARE_MD1[@]}"

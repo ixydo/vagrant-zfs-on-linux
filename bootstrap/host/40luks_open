@@ -10,4 +10,6 @@ cryptsetup status luks-zfs2 || cryptsetup luksOpen --key-file "$temp_key_dir/$rd
 cryptsetup status luks-zfs3 || cryptsetup luksOpen --key-file "$temp_key_dir/$ddisk1-part1" "/dev/disk/$DISKS_BY/$ddisk1-part1" luks-zfs3
 cryptsetup status luks-zfs4 || cryptsetup luksOpen --key-file "$temp_key_dir/$ddisk2-part1" "/dev/disk/$DISKS_BY/$ddisk2-part1" luks-zfs4
 
-cryptsetup status luks-zfs5 || cryptsetup luksOpen --key-file "$temp_key_dir/$sdisk1-part1" "/dev/disk/$DISKS_BY/$sdisk1-part1" luks-zfs5
+if [ -n "$sdisk1" ]; then
+  cryptsetup status luks-zfs5 || cryptsetup luksOpen --key-file "$temp_key_dir/$sdisk1-part1" "/dev/disk/$DISKS_BY/$sdisk1-part1" luks-zfs5
+fi

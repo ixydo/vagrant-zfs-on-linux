@@ -37,6 +37,8 @@ export ip4_method="dhcp"
 #export ip6_gateway="fe80::1"
 #export nameservers="1.2.3.4 5.6.7.8 2a01:a:b:c::add:9999 2a01:a:b:c::add:9898"
 
+#export br0_address="10.49.6.1/24"
+
 # Generic apt mirror URIs
 export APT_MIRROR="http://httpredir.debian.org/debian"
 export APT_PACKAGES="$APT_MIRROR"
@@ -46,3 +48,7 @@ export APT_SECURITY="http://security.debian.org"
 #export APT_MIRROR="http://mirror.hetzner.de/debian"
 #export APT_PACKAGES="$APT_MIRROR/packages"
 #export APT_SECURITY="$APT_MIRROR/security"
+
+#export LXC_CONTAINERS=(
+#  ht-mx-1
+#)

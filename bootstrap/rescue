@@ -45,7 +45,9 @@ cryptsetup luksOpen "/dev/disk/$DISKS_BY/$rdisk1-part1" luks-zfs1
 cryptsetup luksOpen "/dev/disk/$DISKS_BY/$rdisk2-part1" luks-zfs2
 cryptsetup luksOpen "/dev/disk/$DISKS_BY/$ddisk1-part1" luks-zfs3
 cryptsetup luksOpen "/dev/disk/$DISKS_BY/$ddisk2-part1" luks-zfs4
-cryptsetup luksOpen "/dev/disk/$DISKS_BY/$sdisk1-part1" luks-zfs5
+if [ -n "$sdisk1" ]; then
+  cryptsetup luksOpen "/dev/disk/$DISKS_BY/$sdisk1-part1" luks-zfs5
+fi
 
 modprobe zfs
 

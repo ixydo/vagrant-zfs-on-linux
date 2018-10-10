@@ -7,11 +7,16 @@ set -eEu
 set -o pipefail
 
 cd "$(dirname "$0")"
-source "$(dirname "$(readlink -f "$0")")/config"
+: "${1?You must specify the config you want to load}"
+echo
+echo "Loading config from $(dirname "$(readlink -f "$0")")/$1"
+echo
+# shellcheck disable=SC1090
+source "$(dirname "$(readlink -f "$0")")/$1"
 
-if [ $# -eq 0 ]; then
+if [ $# -eq 1 ]; then
     echo
-    echo "Performing pre-installation setups ..."
+    echo "Performing pre-installation setup ..."
     echo
     set -x
     host/10initial
@@ -22,9 +27,11 @@ if [ $# -eq 0 ]; then
     echo "Performing minimal installation ..."
     host/60setup_initial_system
     host/70copy_luks_keys
+    ## Prepare to perform post-install configuration
+    umount /boot/efi
     ## Copy script to destination system and exec via chroot
     cp -r "$(dirname "$(readlink -f "$0")")" /mnt/root/
-    chroot /mnt /bin/bash --login "/root/$(basename "$(dirname "$(readlink -f "$0")")")/run" post-install-config
+    chroot /mnt /bin/bash --login "/root/$(basename "$(dirname "$(readlink -f "$0")")")/run" "$1" post-install-config
     set +x
 
     echo
@@ -42,7 +49,7 @@ if [ $# -eq 0 ]; then
     zpool export tank
     #reboot
 
-elif [[ $1 == post-install-config ]]; then
+elif [[ $2 == post-install-config ]]; then
     echo
     echo "Performing post-install configuration ..."
     echo

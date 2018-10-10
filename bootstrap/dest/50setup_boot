@@ -20,12 +20,16 @@ GRUB_CMDLINE_LINUX_DEFAULT=""/' /etc/default/grub
 update-grub
 if [ $USE_EFI -eq 1 ]; then
   for dsk in $rdisk1 $rdisk2 $ddisk1 $ddisk2 $sdisk1; do
-    grub-install --target=x86_64-efi --efi-directory=/boot/efi \
-        --recheck --no-floppy $dsk
+    if [ -n "$dsk" ]; then
+      grub-install --target=x86_64-efi --efi-directory=/boot/efi \
+          --recheck --no-floppy /dev/disk/$DISKS_BY/$dsk
+    fi
   done
 else
   for dsk in $rdisk1 $rdisk2 $ddisk1 $ddisk2 $sdisk1; do
-    grub-install --target=i386-pc --recheck --no-floppy /dev/$dsk
+    if [ -n "$dsk" ]; then
+      grub-install --target=i386-pc --recheck --no-floppy /dev/disk/$DISKS_BY/$dsk
+    fi
   done
 fi
 

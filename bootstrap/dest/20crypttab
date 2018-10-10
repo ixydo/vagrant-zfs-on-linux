@@ -13,7 +13,9 @@ rdisk2_uuid="$(blkid -s UUID -o value /dev/disk/$DISKS_BY/$rdisk2-part1)"
 ddisk1_uuid="$(blkid -s UUID -o value /dev/disk/$DISKS_BY/$ddisk1-part1)"
 ddisk2_uuid="$(blkid -s UUID -o value /dev/disk/$DISKS_BY/$ddisk2-part1)"
 
-sdisk1_uuid="$(blkid -s UUID -o value /dev/disk/$DISKS_BY/$sdisk1-part1)"
+if [ -n "$sdisk1" ]; then
+  sdisk1_uuid="$(blkid -s UUID -o value /dev/disk/$DISKS_BY/$sdisk1-part1)"
+fi
 
 {
   echo "luks-zfs1 UUID=$rdisk1_uuid $dest_key_dir/$rdisk1-part1 luks,discard,initramfs"
@@ -22,7 +24,9 @@ sdisk1_uuid="$(blkid -s UUID -o value /dev/disk/$DISKS_BY/$sdisk1-part1)"
   echo "luks-zfs3 UUID=$ddisk1_uuid $dest_key_dir/$ddisk1-part1 luks,discard,initramfs"
   echo "luks-zfs4 UUID=$ddisk2_uuid $dest_key_dir/$ddisk2-part1 luks,discard,initramfs"
 
-  echo "luks-zfs5 UUID=$sdisk1_uuid $dest_key_dir/$sdisk1-part1 luks,discard"
+  if [ -n "$sdisk1" ]; then
+    echo "luks-zfs5 UUID=$sdisk1_uuid $dest_key_dir/$sdisk1-part1 luks,discard"
+  fi
 } >> /etc/crypttab
 
 sed -i '/^\(CRYPTSETUP\|KEYFILE_PATTERN\)=/d' /etc/cryptsetup-initramfs/conf-hook
