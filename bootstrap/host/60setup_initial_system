@@ -55,20 +55,19 @@ EOF
 auto br0
 iface br0 inet static
   bridge_ports none
-  address 10.49.6.1
-  netmask 255.255.255.0
+  address $br0_address
   pre-up brctl addbr \$IFACE
 
 iface br0 inet6 static
   bridge_ports none
   address ${ip6_address/::2\/64/:b0::1}
   netmask 96
-  pre-up /sbin/sysctl net.ipv6.conf.$IFACE.disable_ipv6=0
+  pre-up /sbin/sysctl net.ipv6.conf.\$IFACE.disable_ipv6=0
 EOF
         else
           cat > "/mnt/etc/network/interfaces.d/$eth_dev" <<EOF
-auto eth0
-iface eth0 inet dhcp
+auto $eth_dev
+iface $eth_dev inet dhcp
 EOF
         fi
         ;;
@@ -128,7 +127,14 @@ mount --rbind /dev  /mnt/dev
 mount --rbind /proc /mnt/proc
 mount --rbind /sys  /mnt/sys
 
-if [ $USE_EFI -eq 1 ]; then
+# Add host key for vagrant instances
+if [ -r /home/vagrant/.ssh/authorized_keys ]; then
+  mkdir --mode=0700 /mnt/root/.ssh
+  cp /home/vagrant/.ssh/authorized_keys /mnt/root/.ssh/
+  chown root:root /mnt/root/.ssh/authorized_keys
+fi
+
+if [ "$USE_EFI" -eq 1 ]; then
   modprobe efivarfs
   if [ ! -d /mnt/sys/firmware/efi/efivars ]; then
     # shellcheck disable=SC2015
