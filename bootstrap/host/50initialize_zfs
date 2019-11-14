@@ -37,6 +37,10 @@ zfs create -o recordsize=16k -o logbias=throughput -o mountpoint=/var/lib/mysql/
 zfs create -o recordsize=1m                        -o mountpoint=/var/lib/mysql/log  tank/var/lib/mysql/log
 zfs create -o recordsize=16k -o logbias=throughput -o mountpoint=/var/lib/mysql/tmp  \
            -o com.sun:auto-snapshot=false                                            tank/var/lib/mysql/tmp
+# Database backups
+zfs create -o recordsize=1m                        -o mountpoint=/var/lib/automysqlbackup tank/var/lib/automysqlbackup
+# Borg backup
+zfs create -o recordsize=1m                        -o mountpoint=/var/cache/borg     tank/var/cache/borg
 
 # LXC filesystem
 zfs create -o canmount=off -o setuid=on  -o exec=on  -o mountpoint=none  tank/var/lib/lxc
@@ -47,4 +51,3 @@ done
 
 # /home
 zfs create -o mountpoint=/home -o setuid=off                             tank/home
-

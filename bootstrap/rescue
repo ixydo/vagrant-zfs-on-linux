@@ -54,7 +54,7 @@ modprobe zfs
 zpool import tank -R /mnt
 
 mount | grep zfs | sort | tac | awk '/\/mnt/ {print $3}' | xargs -i{} umount -lf {}
-rm -rf /mnt/*
+#rm -rf /mnt/*
 
 zfs mount tank/root
 mount /dev/md0 /mnt/boot

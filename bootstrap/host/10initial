@@ -5,9 +5,11 @@ set -o pipefail
 set -x
 
 # Disable HT
-for cpu in /sys/devices/system/cpu/cpu{8..15}/online; do
-  if [ -r $cpu ]; then
-    echo 0 > $cpu
+for cpu in /sys/devices/system/cpu/cpu[0-9]; do
+  CPU_ID=$(basename "$cpu" | grep -Eo '[0-9]')
+  if [ "$CPU_ID" -ne "$(< "$cpu/topology/core_id")" ]; then
+    echo "Shutdown $(basename "$cpu")"
+    echo 0 >> "$cpu/online"
   fi
 done
 
