@@ -29,6 +29,8 @@ zfs create -o canmount=off -o setuid=off -o exec=off -o mountpoint=none     tank
 zfs create -o com.sun:auto-snapshot=false -o mountpoint=/var/cache          tank/var/cache
 zfs create                                -o mountpoint=/var/log            tank/var/log
 zfs create -o com.sun:auto-snapshot=false -o exec=on -o mountpoint=/var/tmp tank/var/tmp
+# Docker
+zfs create -o com.sun:auto-snapshot=false -o setuid=on  -o exec=on  -o mountpoint=/var/lib/docker  tank/var/lib/docker
 
 # Database filesystem
 zfs create -o canmount=off -o mountpoint=none                                        tank/var/lib
@@ -44,6 +46,7 @@ zfs create -o recordsize=1m                        -o mountpoint=/var/cache/borg
 
 # LXC filesystem
 zfs create -o canmount=off -o setuid=on  -o exec=on  -o mountpoint=none  tank/var/lib/lxc
+
 
 for container in "${LXC_CONTAINERS[@]}"; do
   zfs create -o mountpoint=/var/lib/lxc/$container                           tank/var/lib/lxc/$container
